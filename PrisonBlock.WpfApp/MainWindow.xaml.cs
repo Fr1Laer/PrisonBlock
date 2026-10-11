@@ -50,6 +50,9 @@ namespace PrisonBlock.WpfApp
             _service.Add(new Artist("Artist"));
             _service.Add(new ChessMaster("ChessMaster"));
 
+            // chef added
+            _service.Add(new Chef("Chef"));
+
             SelectedPrisoner = Prisoners[0];
         }
 
