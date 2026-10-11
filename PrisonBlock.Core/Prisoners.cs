@@ -154,4 +154,34 @@ public sealed class ChessMaster : Prisoner, IPlayChess, IStudy
     }
 }
 
+// new prisoner: Chef
+public sealed class Chef : Prisoner, IWork
+{
+    public Chef(string name) : base(name, 70)
+    {
+    }
+
+    public string Work()
+    {
+        if (!TrySpendEnergy(7))
+        {
+            return $"{Name} on praegu liiga väsinud, et süüa teha";
+        }
+
+        return $"{Name} avastab endale uusi meetodeid, valmistades vangidele järgmist sööki";
+    }
+
+    public override string CrazyAction()
+    {
+        if (Energy < 18)
+        {
+            RestoreEnergy(15);
+            return $"{Name} teeb köögis lühikese uinaku, unistades Michelin-tärnist. Energia on taastunud";
+        }
+
+        TrySpendEnergy(16);
+
+        return $"{Name} korraldab toiduvalmistamisvõistluse, kasutades vangla toidujääke";
+    }
+}
 
