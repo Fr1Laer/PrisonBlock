@@ -44,6 +44,10 @@
                     <ComboBoxItem Content="Philosopher"/>
                     <ComboBoxItem Content="Artist"/>
                     <ComboBoxItem Content="ChessMaster"/>
+                    
+                    <!-- chef added -->
+                    <ComboBoxItem Content="Chef"/>
+                    
                 </ComboBox>
 
                 <Grid Grid.Row="4">
