@@ -26,6 +26,10 @@ public static class PrisonFactory
             "philosopher" => new Philoshopher(cleanName),
             "artist" => new Artist(cleanName),
             "chessmaster" => new ChessMaster(cleanName),
+
+            // chef added 
+            "chef" => new Chef(cleanName),
+
             _ => Invalid(out error)
         };
     }
