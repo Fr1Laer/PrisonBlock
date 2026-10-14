@@ -35,9 +35,9 @@ public sealed class Rookie : Prisoner, IWork
     }
 }
 
-public sealed class Philoshopher : Prisoner, IStudy
+public sealed class Philosopher : Prisoner, IStudy
 {
-    public Philoshopher(string name) : base(name, 60)
+    public Philosopher(string name) : base(name, 60)
     {
     }
 
