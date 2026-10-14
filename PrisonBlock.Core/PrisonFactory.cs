@@ -23,7 +23,7 @@ public static class PrisonFactory
         return type.Trim().ToLowerInvariant() switch
         {
             "rookie" => new Rookie(cleanName),
-            "philosopher" => new Philoshopher(cleanName),
+            "philosopher" => new Philosopher(cleanName),
             "artist" => new Artist(cleanName),
             "chessmaster" => new ChessMaster(cleanName),
 
