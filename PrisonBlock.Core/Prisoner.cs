@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Reflection.Metadata;
+using System.Security.AccessControl;
 
 namespace PrisonBlock.Core;
 
@@ -41,4 +42,45 @@ public abstract class Prisoner
 
     public virtual string GetDetails() => $"{Name} | {GetType().Name} | Energia: {Energy}/100";
     public abstract string CrazyAction();
+
+    public event Action<string>? ReactionLogged; 
+
+    internal void Subscribe(IPrisonerEventSource source)
+    {
+        source.Added += OnAdded;
+        source.Removing += OnRemoving;
+        source.CrazyActionPerformed += OnCrazyActionPerformed;
+    }
+
+    internal void Unsubscribe(IPrisonerEventSource source)
+    {
+        source.Added -= OnAdded;
+        source.Removing -= OnRemoving;
+        source.CrazyActionPerformed -= OnCrazyActionPerformed;
+    }
+
+    private void OnAdded(Prisoner prisoner)
+    {
+        if (ReferenceEquals(this, prisoner))
+            return;
+
+        RestoreEnergy(2);
+        ReactionLogged?.Invoke($"{Name} tervitab uut tegelast {prisoner.Name}. Energia +2");
+    }
+
+    private void OnRemoving(Prisoner prisoner)
+    {
+        if (ReferenceEquals(this, prisoner))
+            return;
+
+        ReactionLogged?.Invoke($"{Name} jätab tegelasega {prisoner.Name} hüvasti");
+    }
+
+    private void OnCrazyActionPerformed(Prisoner prisoner)
+    {
+        if (ReferenceEquals(this, prisoner))
+            return;
+
+        ReactionLogged?.Invoke($"{Name} reageerib tegelase {prisoner.Name} pöörasele tegevusele");
+    }
 }
