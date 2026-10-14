@@ -14,6 +14,7 @@
             <ColumnDefinition Width="3*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- LEFT SIDE: Prisoners and adding a new prisoner -->
         <GroupBox Header="Vangid"
                   Grid.Column="0"
                   Margin="0,0,5,0">
@@ -27,31 +28,27 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Label Content="Nimi" Grid.Row="0"/>
+                <Label Content="Nimi"
+                       Grid.Row="0"/>
 
-                <TextBox x:Name="NameTextBox"
-                         Grid.Row="1"
+                <TextBox Grid.Row="1"
                          MaxLength="20"
-                         Margin="0,0,0,10"/>
+                         Margin="0,0,0,10"
+                         Text="{Binding NewName,
+                             UpdateSourceTrigger=PropertyChanged}"/>
 
-                <Label Content="Tüüp" Grid.Row="2"/>
+                <Label Content="Tüüp"
+                       Grid.Row="2"/>
 
-                <ComboBox x:Name="TypeBox"
-                          SelectedIndex="0"
-                          Grid.Row="3"
-                          Margin="0,0,0,10">
-                    <ComboBoxItem Content="Rookie"/>
-                    <ComboBoxItem Content="Philosopher"/>
-                    <ComboBoxItem Content="Artist"/>
-                    <ComboBoxItem Content="ChessMaster"/>
-                    
-                    <!-- chef added -->
-                    <ComboBoxItem Content="Chef"/>
-                    
-                </ComboBox>
+                <ComboBox Grid.Row="3"
+                          Margin="0,0,0,10"
+                          ItemsSource="{Binding RepositoryTypes}"
+                          SelectedItem="{Binding SelectedRepositoryType,
+                              Mode=TwoWay}"/>
 
                 <Grid Grid.Row="4">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
@@ -60,40 +57,105 @@
                             Grid.Row="0"
                             Height="35"
                             Margin="0,0,0,10"
-                            Click="Add_Click"/>
+                            Command="{Binding AddCommand}"/>
 
-                    <ListBox x:Name="PrisonerList"
-                             Grid.Row="1"
-                             ItemsSource="{Binding Prisoners}"
+                    <TextBox Grid.Row="1"
+                             Margin="0,0,0,10"
+                             ToolTip="Otsi vange nime järgi"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <ListBox Grid.Row="2"
+                             ItemsSource="{Binding FilteredPrisoners}"
                              SelectedItem="{Binding SelectedPrisoner, Mode=TwoWay}"
                              DisplayMemberPath="Name"/>
                 </Grid>
             </Grid>
         </GroupBox>
-        <StackPanel/>
-        <GroupBox Grid.Column="1" Header="Valitud vang">
+
+        <!-- RIGHT SIDE: Selected prisoner, actions, LINQ results and log -->
+        <GroupBox Grid.Column="1"
+                  Header="Valitud vang">
+
             <Grid Margin="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <StackPanel>
-                    <TextBlock x:Name="DetailsText" FontSize="16" TextWrapping="Wrap"/>
-                    <TextBlock Text="Energia" Margin="0,12,0,2"/>
-                    <ProgressBar x:Name="EnergyBar" Minimum="0" Maximum="100" Height="18"/>
+
+                <!-- Selected prisoner details -->
+                <StackPanel Grid.Row="0">
+                    <TextBlock FontSize="16"
+                               TextWrapping="Wrap"
+                               Text="{Binding SelectedDetails}"/>
+
+                    <TextBlock Text="Energia"
+                               Margin="0,12,0,2"/>
+
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Height="18"
+                                 Value="{Binding SelectedEnergy, Mode=OneWay}"/>
                 </StackPanel>
-                <WrapPanel Grid.Row="1" Margin="0,15,0,10">
-                    <Button Content="Crazy Action" Click="Crazy_Click" Padding="10,6" Margin="0,0,6,6"/>
-                    <Button Content="Work" Click="Work_Click" Padding="10,6" Margin="0,0,6,6"/>
-                    <Button Content="Study" Click="Study_Click" Padding="10,6" Margin="0,0,6,6"/>
-                    <Button Content="Play Chess" Click="Chess_Click" Padding="10,6" Margin="0,0,6,6"/>
-                    <Button Content="Remove" Click="Remove_Click" Padding="10,6" Margin="0,0,6,6"/>
+
+                <!-- Prisoner actions -->
+                <WrapPanel Grid.Row="1"
+                           Margin="0,15,0,10">
+
+                    <Button Content="Crazy Action"
+                            Command="{Binding CrazyActionCommand}"
+                            Padding="10,6"
+                            Margin="0,0,6,6"/>
+
+                    <Button Content="Work"
+                            Command="{Binding WorkCommand}"
+                            Padding="10,6"
+                            Margin="0,0,6,6"/>
+
+                    <Button Content="Study"
+                            Command="{Binding StudyCommand}"
+                            Padding="10,6"
+                            Margin="0,0,6,6"/>
+
+                    <Button Content="Play Chess"
+                            Command="{Binding ChessCommand}"
+                            Padding="10,6"
+                            Margin="0,0,6,6"/>
+
+                    <Button Content="Remove"
+                            Command="{Binding RemoveCommand}"
+                            Padding="10,6"
+                            Margin="0,0,6,6"/>
                 </WrapPanel>
-                <Expander Grid.Row="2" Header="Action log" IsExpanded="True">
-                    <TextBox x:Name="LogBox" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Height="260"/>
-                </Expander>
+
+                <!-- LINQ results and action log -->
+                <TabControl Grid.Row="2">
+
+                    <TabItem Header="Sorteeritud">
+                        <ListBox ItemsSource="{Binding SortedPrisoners}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding Name, Mode=OneWay}"/>
+                                        <Run Text=" -  energia: "/>
+                                        <Run Text="{Binding Energy, Mode=OneWay}"/>
+                                        <Run Text="/100"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </TabItem>
+
+                    <TabItem Header="Tüüpide kokkuvõte">
+                        <ListBox ItemsSource="{Binding Summary}"/>
+                    </TabItem>
+
+                    <TabItem Header="Action log">
+                        <ListBox ItemsSource="{Binding Log}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                    </TabItem>
+
+                </TabControl>
             </Grid>
         </GroupBox>
     </Grid>
