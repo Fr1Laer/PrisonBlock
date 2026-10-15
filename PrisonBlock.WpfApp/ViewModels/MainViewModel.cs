@@ -99,7 +99,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public string SelectedDetails => SelectedPrisoner?.GetDetails() ?? "Vangit ei valitud";
+    public string SelectedDetails => SelectedPrisoner?.GetDetails() ?? "Vangi ei valitud";
 
     public int SelectedEnergy => SelectedPrisoner?.Energy ?? 0;
 
