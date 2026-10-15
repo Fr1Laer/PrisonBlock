@@ -185,3 +185,132 @@ public sealed class Chef : Prisoner, IWork
     }
 }
 
+
+/// new prisoner type: Gardener (ainult IWork, loendab taimi)
+public sealed class Gardener : Prisoner, IWork
+{
+    private int _plants;
+
+    public Gardener(string name) : base(name, 80)
+    {
+    }
+
+    public int Plants => _plants;
+
+    public string Work()
+    {
+        if (!TrySpendEnergy(12))
+        {
+            return $"{Name} on liiga väsinud, et vangla hoovis taimi kasta";
+        }
+
+        _plants++;
+
+        return $"{Name} istutab betoonipragu tomatitaime #{_plants}";
+    }
+
+    public override string GetDetails() => base.GetDetails() + $" | Taimed: {Plants}";
+
+    public override string CrazyAction()
+    {
+        if (Energy < 20)
+        {
+            RestoreEnergy(15);
+            return $"{Name} jääb porgandipeenra kõrvale magama. Energia on taastunud";
+        }
+
+        TrySpendEnergy(15);
+        _plants++;
+
+        return $"{Name} kuulutab hoovi iseseisvaks lillekuningriigiks ja istutab taime #{_plants}";
+    }
+}
+
+/// new prisoner type: Musician (IWork + IStudy, loendab laule)
+public sealed class Musician : Prisoner, IWork, IStudy
+{
+    private int _songs;
+
+    public Musician(string name) : base(name, 70)
+    {
+    }
+
+    public int Songs => _songs;
+
+    public string Work()
+    {
+        if (!TrySpendEnergy(10))
+        {
+            return $"{Name} on liiga väsinud, et plekktassil trummi lüüa";
+        }
+
+        _songs++;
+
+        return $"{Name} esitab koridoris plekktassiga laulu #{_songs}";
+    }
+
+    public string Study()
+    {
+        if (!TrySpendEnergy(6))
+        {
+            return $"{Name} ei suuda noote õppida, sest tal on kõrvad kinni";
+        }
+
+        return $"{Name} õpib noote, mis on kirjutatud vangla toidumenüü tagaküljele";
+    }
+
+    public override string GetDetails() => base.GetDetails() + $" | Laulud: {Songs}";
+
+    public override string CrazyAction()
+    {
+        if (!TrySpendEnergy(14))
+        {
+            RestoreEnergy(12);
+            return $"{Name} annab vaikuse-kontserdi ja puhkab. Energia on taastunud";
+        }
+
+        _songs++;
+
+        return $"{Name} annab rakuseina taga kontserdi. Laul #{_songs} saab kõigi lemmikuks";
+    }
+}
+
+/// new prisoner type: Gambler
+public sealed class Gambler : Prisoner, IPlayChess
+{
+    private int _cheats;
+
+    public Gambler(string name) : base(name, 55)
+    {
+    }
+
+    public int Cheats => _cheats;
+
+    public string PlayChess()
+    {
+        if (!TrySpendEnergy(9))
+        {
+            return $"{Name} on liiga väsinud, et malelauda isegi ära kaotada";
+        }
+
+        _cheats++;
+
+        return $"{Name} mängib malet ja vahetab salaja etturi ära. Petmine #{_cheats}";
+    }
+
+    public override string GetDetails() => base.GetDetails() + $" | Petmised: {Cheats}";
+
+    public override string CrazyAction()
+    {
+        if (Energy < 15)
+        {
+            RestoreEnergy(10);
+            return $"{Name} kaotab kõik sigaretid ja läheb nutma. Energia on taastunud";
+        }
+
+        TrySpendEnergy(13);
+        _cheats++;
+
+        return $"{Name} panustab oma sööklaportsjoni ja kaotab selle. Petmine #{_cheats}";
+    }
+}

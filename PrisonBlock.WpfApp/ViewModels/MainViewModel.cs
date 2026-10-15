@@ -131,6 +131,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _service.Add(new Artist("Artist"));
         _service.Add(new ChessMaster("ChessMaster"));
         _service.Add(new Chef("Chef"));
+
+        /// new prisoners
+        _service.Add(new Gardener("Gardener"));
+        _service.Add(new Musician("Musician"));
+        _service.Add(new Gambler("Gambler"));
     }
 
     private void Add()

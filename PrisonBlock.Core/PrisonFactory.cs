@@ -30,6 +30,11 @@ public static class PrisonFactory
             // chef added 
             "chef" => new Chef(cleanName),
 
+            /// new prisoner types
+            "gardener" => new Gardener(cleanName),
+            "musician" => new Musician(cleanName),
+            "gambler" => new Gambler(cleanName),
+
             _ => Invalid(out error)
         };
     }

@@ -13,6 +13,11 @@ public sealed class PrisonService
     public Repository<ChessMaster> ChessMasters { get; } = new();
     public Repository<Chef> Chefs { get; } = new();
 
+    /// new prisoner types and their repositories
+    public Repository<Gardener> Gardeners { get; } = new();
+    public Repository<Musician> Musicians { get; } = new();
+    public Repository<Gambler> Gamblers { get; } = new();
+
     public event Action<string>? LogGenerated;
 
     public PrisonService()
@@ -22,6 +27,11 @@ public sealed class PrisonService
         Artists.LogGenerated += ForwardLog;
         ChessMasters.LogGenerated += ForwardLog;
         Chefs.LogGenerated += ForwardLog;
+
+        /// New repositories for new prisoner types
+        Gardeners.LogGenerated += ForwardLog;
+        Musicians.LogGenerated += ForwardLog;
+        Gamblers.LogGenerated += ForwardLog;
     }
 
     public string[] RepositoryTypes =>
@@ -30,7 +40,10 @@ public sealed class PrisonService
         nameof(Philosopher),
         nameof(Artist),
         nameof(ChessMaster),
-        nameof(Chef)
+        nameof(Chef),
+        nameof(Gardener),
+        nameof(Musician),
+        nameof(Gambler)
      ];
 
     public IEnumerable<Prisoner> GetAll() =>
@@ -38,7 +51,10 @@ public sealed class PrisonService
             .Concat(Philosophers.GetAll())
             .Concat(Artists.GetAll())
             .Concat(ChessMasters.GetAll())
-            .Concat(Chefs.GetAll());
+            .Concat(Chefs.GetAll())
+            .Concat(Gardeners.GetAll())
+            .Concat(Musicians.GetAll())
+            .Concat(Gamblers.GetAll());
 
     public IEnumerable<Prisoner> GetByType(string type) => type switch
     {
@@ -47,6 +63,10 @@ public sealed class PrisonService
         nameof(Artist) => Artists.GetAll(),
         nameof(ChessMaster) => ChessMasters.GetAll(),
         nameof(Chef) => Chefs.GetAll(),
+        nameof(Gardener) => Gardeners.GetAll(),
+        nameof(Musician) => Musicians.GetAll(),
+        nameof(Gambler) => Gamblers.GetAll(),
+
         _ => Enumerable.Empty<Prisoner>()
     };
 
@@ -73,6 +93,15 @@ public sealed class PrisonService
             case Chef p: 
                 Chefs.Add(p); 
                 break;
+            case Gardener p:
+                Gardeners.Add(p);
+                break;
+            case Musician p:
+                Musicians.Add(p);
+                break;
+            case Gambler p:
+                Gamblers.Add(p);
+                break;
             default:
                 throw new ArgumentException("Tundmatu tegelastüüp", nameof(prisoner));
         }
@@ -86,6 +115,9 @@ public sealed class PrisonService
             Artist p => Artists.Remove(p),
             ChessMaster p => ChessMasters.Remove(p),
             Chef p => Chefs.Remove(p),
+            Gardener p => Gardeners.Remove(p),
+            Musician p => Musicians.Remove(p),
+            Gambler p => Gamblers.Remove(p),
             _ => false
         };
 
@@ -112,6 +144,15 @@ public sealed class PrisonService
                 break;
             case Chef r: 
                 Chefs.PublishCrazyAction(r); 
+                break;
+            case Gardener r:
+                Gardeners.PublishCrazyAction(r);
+                break;
+            case Musician r:
+                Musicians.PublishCrazyAction(r);
+                break;
+            case Gambler r:
+                Gamblers.PublishCrazyAction(r);
                 break;
         }
 
