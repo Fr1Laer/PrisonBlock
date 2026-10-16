@@ -2,7 +2,7 @@
 
 ## Valitud maailma ja rakenduse eesmärki
 
-Humoorikas WPF-rakendus, kus neli vangi (Rookie, Philosopher, Artist, ChessMaster) saavad teha erinevaid tegevusi
+Humoorikas WPF-rakendus, kus neli vangi (Rookie, Philosopher, Artist, ChessMaster, Chef, Gardener, Musician, Gambler) saavad teha erinevaid tegevusi
 
 ## Kuidas programmiga töötada
 
