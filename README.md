@@ -171,3 +171,8 @@ Järjestikuse ja paralleelse režiimi võrdlemiseks tuleb valida samad objektid 
 
 <img width="977" height="570" alt="image" src="https://github.com/user-attachments/assets/34377c19-1f22-4005-8de2-4eed1db20e50" />
 
+### Testviga
+
+<img width="972" height="557" alt="image" src="https://github.com/user-attachments/assets/549860a6-b0fb-4c7d-a0c3-14936edadfd9" />
+
+
