@@ -157,4 +157,17 @@ Järjestikuse ja paralleelse režiimi võrdlemiseks tuleb valida samad objektid 
 - muutumatud snapshot-andmed - samade sisendandmete kasutamine mõlemas režiimis
 - WPF-i andmesidumine (`INotifyPropertyChanged`, `ObservableCollection`) - kasutajaliidese ja arvutustulemuste uuendamine
 
-### Programmi töötamise näide 
+## Programmi töötamise näide 
+
+### Arvutuste edukas sooritamine (paralleelne)
+
+<img width="981" height="566" alt="Знімок екрана 2026-10-27 212834" src="https://github.com/user-attachments/assets/44a6d0bc-2a84-439a-b6a2-1afa94dc5667" />
+
+### Arvutuste edukas sooritamine koos mõnede objektide tühjendamisega (paralleelne)
+
+<img width="975" height="556" alt="Знімок екрана 2026-10-27 212859" src="https://github.com/user-attachments/assets/626c02f0-3fe3-4a92-8a72-607ce3931c64" />
+
+### Arvutuste edukas sooritamine (järjestikune)
+
+<img width="977" height="570" alt="image" src="https://github.com/user-attachments/assets/34377c19-1f22-4005-8de2-4eed1db20e50" />
+
