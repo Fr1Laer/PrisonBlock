@@ -598,6 +598,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         int iterations,
         CancellationToken token)
     {
+        // Tekitab testimiseks kunstliku arvutusvea
+        //if (snapshot.Name == "Rookie")
+        //{
+        //    throw new InvalidOperationException(
+        //        "Testviga: arvutus ebaõnnestus");
+        //}
+
         uint state = 2166136261;
 
         unchecked
