@@ -2,7 +2,7 @@
 
 ## Valitud maailma ja rakenduse eesmärki
 
-Humoorikas WPF-rakendus, kus neli vangi (Rookie, Philosopher, Artist, ChessMaster, Chef, Gardener, Musician, Gambler) saavad teha erinevaid tegevusi
+Humoorikas WPF-rakendus, kus vangid (Rookie, Philosopher, Artist, ChessMaster, Chef, Gardener, Musician, Gambler) saavad teha erinevaid tegevusi. Igal vangitüübil on oma omadused ja võimekused
 
 ## Kuidas programmiga töötada
 
@@ -10,7 +10,7 @@ Humoorikas WPF-rakendus, kus neli vangi (Rookie, Philosopher, Artist, ChessMaste
 
 - Valige vangide tüüp
 
-- Valige ta allolevast nimekirjast
+- Lisage vang nupuga **Lisa vang**
 
 - Valige üks tegevustest, mida vang peab tegema: `CrazyAction`, `Work`, `Study`, `Play Chess`
 
@@ -18,50 +18,143 @@ Humoorikas WPF-rakendus, kus neli vangi (Rookie, Philosopher, Artist, ChessMaste
 
 - Vangi eemaldamiseks tuleb ta nimekirjast valida ja seejärel klõpsata nupule **Remove**
 
+- Kasutage otsingut vangide leidmiseks nime järgi
+
+- Vaadake sorteeritud vangide nimekirja, tüüpide kokkuvõtet ja tegevuste logi
+
+## Vol. 2 selgitus
+
 ## Klassihierarhia ning liideste lühikirjeldust
 
-- Abstraktne `Prisoner` on baasklass neljale alamklassile
-- Liidesed `IWork`, `IStudy` ja `IPlayChess` määravad vangide võimekused
-- `Prisoners` vastutab iga vangide tegude eest
-- `PrisonFactory` kontrollib nime õigsust, eemaldab üleliigsed tühikud ja väljastab veateate, kui nimi on tühi või kui lukustatud objekti tüüp on teadmata
-- `PrisonService` kontrollib valitud vangide olemasolu ja toetab liideseid IWork, IStudy ja IPlayChess, et kindlaks teha, millised tegevused on konkreetsele vangile kättesaadavad
+- `Prisoner` – abstraktne baasklass, mis sisaldab vangide ühiseid omadusi ja meetodeid
+
+- Vangitüübid: `Rookie`, `Philosopher`, `Artist`, `ChessMaster`, `Chef`, `Musician`, `Athlete` ja `Comedian`
+
+- `IWork`, `IStudy` ja `IPlayChess` - liidesed, mis määravad, milliseid tegevusi vang saab sooritada
+
+- `PrisonFactory` - loob vange vastavalt valitud tüübile ja kontrollib sisendit
+
+- `IRepository<T>` ja `Repository<T>` - võimaldavad vange lisada, eemaldada, otsida ja kuvada
+
+- `PrisonService` – haldab vangidega seotud toiminguid ja suhtlust hoidlate vahel
+
+- `MainViewModel` - haldab kasutajaliidese andmeid, käske, filtreerimist, sorteerimist ja statistikat
+
+- `MainWindow.xaml` - rakenduse graafiline kasutajaliides
+
+- `RelayCommand` - rakendab `ICommand`-liidest ning seob kasutajaliidese toimingud `ViewModeli` meetoditega
+
+- `Events` - võimaldavad objektidel toimunud sündmustest teistele objektidele teada anda. Neid kasutatakse näiteks vangide lisamise, eemaldamise ja reaktsioonide logimiseks
+
+- `Generics` - võimaldavad kirjutada taaskasutatavat koodi eri andmetüüpide jaoks. Näiteks `Repository<T>` saab hallata erinevat tüüpi vange ilma eraldi hoidlaklassi loomata
+
+## Sündmused ja vangide reaktsioonid
+
+- Olemasolevad vangid tervitavad uut vangi
+- Vangi eemaldamisel jätavad teised vangid temaga hüvasti
+- `CrazyAction` käivitamisel reageerivad sama hoidla teised vangid
+- Eemaldatud vang ei reageeri enam hilisematele sündmustele
+- Reaktsioonid salvestatakse tegevuste logisse ning võivad muuta vangide olekut
 
 ## CrazyAction-tegevuste ja olekureeglite selgitust
 
-Iga vang täidab funktsiooni CrazyAction() erinevalt. Tegevused võivad muuta energiat, meistriteoste arvu või malevõitude arvu. Energia jääb vahemikku 0–100
+Igal vangitüübil on oma `CrazyAction()` meetodi teostus. Tegevused võivad muuta energiat, meistriteoste arvu või malevõitude arvu. Energia jääb vahemikku 0–100
 
-## Valitud iseseisvalt õpitud WPF UI elemendi põhjendust
+## MVVM-arhitektuur
 
-ProgressBar kuvab valitud vangi energiat visuaalselt, muutes oleku jälgimise lihtsaks
+- `Model` - esindab vange ja nende omadusi ning tegevusi. `Model` hõlmab järgmisi komponente: `Prisoner`, `Prisoners`, `PrisonerFactory`
 
-## Vähemalt viit kontrollitud kasutusjuhtu
+- `View` - `MainWindow.xaml`, mis määrab rakenduse graafilise kasutajaliidese
 
-### 1. Vangi lisamine kehtiva nimega
+- `ViewModel` - `MainViewModel`, mis haldab kasutajaliidese andmeid, käske, filtreerimist, sorteerimist ja statistikat
 
-<img width="980" height="536" alt="image" src="https://github.com/user-attachments/assets/a6503fe4-1eeb-4016-bd04-f33639eec847" />
+- `DataBinding` - seob kasutajaliidese elemendid ViewModeli andmetega
 
-### 2. Tühja nime tagasilükkamine
+- `RelayCommand` - võimaldab siduda kasutajaliidese nupud `ViewModeli` käskudega
 
-<img width="976" height="535" alt="image" src="https://github.com/user-attachments/assets/4eab6c9c-961c-4c25-82d7-2230277fb454" />
+## LINQ-päringud
 
-### 3. Erinevate vangide CrazyAction() käivitamine
+Rakendus kasutab LINQ vangide andmete töötlemiseks:
 
-<img width="985" height="537" alt="image" src="https://github.com/user-attachments/assets/eaad9fa0-9f75-4fa5-8720-89b0fd773dfc" />
+- `Where` - vangide filtreerimine nime järgi
 
-### 4. Artist-i Work ja Study tegevuste kasutamine
+- `OrderByDescending` - vangide sorteerimine energia järgi kahanevas järjekorras
 
-<img width="971" height="515" alt="image" src="https://github.com/user-attachments/assets/2dfec6a3-4fea-4e0f-a19f-439d557a28fd" />
+- `GroupBy` - vangide rühmitamine tüübi järgi
 
-### 5. Sobimatu tegevuse proovimine annab veateate
+- `Count` - vangide arvu leidmine igas rühmas
 
-<img width="979" height="535" alt="image" src="https://github.com/user-attachments/assets/7099eb2f-3153-4950-b198-a7271d297b45" />
+- `Concat` - eri hoidlate vangide ühendamine ühtseks nimekirjaks
 
-## Kaasüliõpilase `issue`
+---
 
-Ülesandeks oli luua uus vangitüüp `Chef`. See vang pärineb abstraktsest klassist `Prisoner`. Lisaks kasutab ta liidest `IWork`. Lisaks sellele realiseerib see vang oma meetodit `CrazyAction`. See vang lisatakse ka järgmistesse failidesse: `PrisonerFactory`, `MainWindow.xaml`, `MainWindow.xaml.cs` meetodis `AddStarterPrisoners()`
+## Vol. 3 selgitus
 
-## Näide uue programmiversiooni tööst, mis rakendab uut vangitüüpi `Chef`
+---
 
-<img width="983" height="538" alt="image" src="https://github.com/user-attachments/assets/1ef0d091-703b-4575-90d7-98173b5e1f3d" />
+## CPU-arvutused ja paralleeltöötlus
 
-Selles näites näidati tegevusi `CrazyAction`, `Work`, `Study`, `Play Chess`
+Rakendus võimaldab võrrelda vangide andmete põhjal tehtavaid CPU-põhiseid arvutusi järjestikuses ja paralleelses režiimis
+
+### Arvutuse objektid
+
+Arvutusteks saab valida vähemalt kolm vangi. Enne arvutuste käivitamist salvestatakse iga valitud vangi kohta muutumatu andmesnapshot, mis sisaldab:
+
+- vangi nime
+- vangi tüüpi
+- energia väärtust
+
+Arvutused kasutavad snapshot'i andmeid, mitte töö käigus muutuvaid vangide omadusi. Nii kasutatakse järjestikuses ja paralleelses režiimis samu sisendandmeid
+
+### Arvutuste mahu valimine
+
+Kasutaja saab valida ühe vangi kohta tehtavate iteratsioonide arvu:
+
+- 100 000
+- 500 000
+- 1 000 000
+- 3 000 000
+- 1 000 000 000
+
+Suurem iteratsioonide arv suurendab CPU-koormust ja võib pikendada arvutuste kestust märkimisväärselt
+
+### Järjestikune režiim
+
+Järjestikuses režiimis käivitatakse iga vangi arvutus pärast eelmise arvutuse lõppu. Iga objekti tulemus, lõppolek ja arvutuse kestus lisatakse aruandesse
+
+### Paralleelne režiim
+
+Paralleelses režiimis käivitatakse objektide arvutused eraldi `Task.Run` ülesannetes. Kõigi ülesannete lõpetamist oodatakse `Task.WhenAll` abil
+
+Mõlemas režiimis kasutatakse sama arvutusalgoritmi ja samu sisendandmeid. Paralleelse režiimi tegelik kiirendus sõltub protsessori võimalustest ja süsteemi koormusest
+
+### Tühistamine ja veakäsitlus
+
+Kasutaja saab valida loendist konkreetse objekti ja tühistada ainult selle objekti arvutuse. Igal objektil on oma `CancellationTokenSource` ja `CancellationToken`
+
+Arvutuse tsükkel kontrollib tühistamistaotlust regulaarselt ning katkestab töö, kui vastava objekti arvutus tühistatakse. Tühistatud objekt eemaldatakse käimasoleva arvutuse ajal tühistamiseks saadaolevate objektide loendist
+
+Iga objekti arvutuse puhul käsitletakse eraldi järgmisi olekuid:
+
+- **Õnnestus** - arvutus lõpetati edukalt ja tulemus saadi kätte
+- **Tühistatud** - arvutus katkestati kasutaja tühistamistaotluse tõttu
+- **Viga** - arvutuse käigus tekkis erand
+
+Ühe objekti viga või tühistamine ei takista teiste objektide arvutuste tulemuste töötlemist. Uue arvutuse käivitamisel lähtestatakse eelmise käivituse tühistamise olekud
+
+### Aruanne ja jõudluse võrdlus
+
+Aruandes kuvatakse iga objekti nimi, lõppolek, tulemus või veateade ning arvutuse kestus millisekundites. Lisaks kuvatakse kõigi arvutuste koguaeg
+
+Järjestikuse ja paralleelse režiimi võrdlemiseks tuleb valida samad objektid ja sama iteratsioonide arv. Tulemuste ja kestuste võrdlemine aitab hinnata paralleeltöötluse mõju rakenduse jõudlusele
+
+### Kasutatud tehnoloogiad
+
+- `Task.Run` - CPU-põhiste arvutuste käivitamine taustal
+- `Task.WhenAll` - paralleelsete ülesannete lõpetamise ootamine;
+- `CancellationTokenSource` ja `CancellationToken` - iga objekti arvutuse eraldi tühistamine
+- `Stopwatch` – arvutuste kestuse mõõtmine
+- muutumatud snapshot-andmed - samade sisendandmete kasutamine mõlemas režiimis
+- WPF-i andmesidumine (`INotifyPropertyChanged`, `ObservableCollection`) - kasutajaliidese ja arvutustulemuste uuendamine
+
+### Programmi töötamise näide 
