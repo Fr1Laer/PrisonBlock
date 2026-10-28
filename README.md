@@ -22,6 +22,8 @@ Humoorikas WPF-rakendus, kus vangid (Rookie, Philosopher, Artist, ChessMaster, C
 
 - Vaadake sorteeritud vangide nimekirja, tüüpide kokkuvõtet ja tegevuste logi
 
+## Vol. 2 selgitus
+
 ## Klassihierarhia ning liideste lühikirjeldust
 
 - `Prisoner` – abstraktne baasklass, mis sisaldab vangide ühiseid omadusi ja meetodeid
@@ -86,26 +88,91 @@ Rakendus kasutab LINQ vangide andmete töötlemiseks:
 
 ---
 
-## Kaasüliõpilase `issue` #2
+## Vol. 3 selgitus
 
-- Tuleb lisada kolm uut tegelasetüüpi/klassi, millest igaüks käitub omal viisil, ning vähemalt üks eksemplar igast uuest tüübist. Kolm eksemplari olemasolevatest tüüpidest ei ole piisav
+---
 
-- Uued tüübid peavad kasutama sama salvestussüsteemi, sündmuste süsteemi ja MVVM-i ning olema kasutajaliideses kasutatavad
+## CPU-arvutused ja paralleeltöötlus
 
-### Kaasüliõpilane lisas kolm uut tüüpi: `Gardener`, `Musician`, `Gambler`
+Rakendus võimaldab võrrelda vangide andmete põhjal tehtavaid CPU-põhiseid arvutusi järjestikuses ja paralleelses režiimis
 
-## Näide programmi tööst (Vol. 2), millele on lisatud uued tüübid
+### Arvutuse objektid
 
-<img width="1031" height="624" alt="Знімок екрана 2026-10-16 123433" src="https://github.com/user-attachments/assets/25d6d1bf-c1c1-49b6-aaef-f75133534af6" />
+Arvutusteks saab valida vähemalt kolm vangi. Enne arvutuste käivitamist salvestatakse iga valitud vangi kohta muutumatu andmesnapshot, mis sisaldab:
 
-<img width="1036" height="625" alt="Знімок екрана 2026-10-16 123445" src="https://github.com/user-attachments/assets/7964a0af-eb3f-4f16-b231-69d94dc979e7" />
+- vangi nime
+- vangi tüüpi
+- energia väärtust
 
-<img width="1037" height="624" alt="Знімок екрана 2026-10-16 123529" src="https://github.com/user-attachments/assets/1df2cbfb-704b-411f-beb0-c1efebfcabb8" />
+Arvutused kasutavad snapshot'i andmeid, mitte töö käigus muutuvaid vangide omadusi. Nii kasutatakse järjestikuses ja paralleelses režiimis samu sisendandmeid
 
-Need näited näitavad, et uued tüübid töötavad korralikult. Samuti toimib sorteerimine, vangidevaheline suhtlus uue tegelase lisamisel ning vangide tüüpide kokkuvõtmine
+### Arvutuste mahu valimine
 
-## Teiste vangide reaktsioon, kui sama rühma kuuluv vang eemaldati\
+Kasutaja saab valida ühe vangi kohta tehtavate iteratsioonide arvu:
 
-<img width="981" height="534" alt="Знімок екрана 2026-10-16 123918" src="https://github.com/user-attachments/assets/93623288-f844-4ae7-a54f-0c7afc7f72a2" />
+- 100 000
+- 500 000
+- 1 000 000
+- 3 000 000
+- 1 000 000 000
 
-Sellest näitest on näha, kuidas teised vangid hüvasti jätavad eemaldatud vangiga 
+Suurem iteratsioonide arv suurendab CPU-koormust ja võib pikendada arvutuste kestust märkimisväärselt
+
+### Järjestikune režiim
+
+Järjestikuses režiimis käivitatakse iga vangi arvutus pärast eelmise arvutuse lõppu. Iga objekti tulemus, lõppolek ja arvutuse kestus lisatakse aruandesse
+
+### Paralleelne režiim
+
+Paralleelses režiimis käivitatakse objektide arvutused eraldi `Task.Run` ülesannetes. Kõigi ülesannete lõpetamist oodatakse `Task.WhenAll` abil
+
+Mõlemas režiimis kasutatakse sama arvutusalgoritmi ja samu sisendandmeid. Paralleelse režiimi tegelik kiirendus sõltub protsessori võimalustest ja süsteemi koormusest
+
+### Tühistamine ja veakäsitlus
+
+Kasutaja saab valida loendist konkreetse objekti ja tühistada ainult selle objekti arvutuse. Igal objektil on oma `CancellationTokenSource` ja `CancellationToken`
+
+Arvutuse tsükkel kontrollib tühistamistaotlust regulaarselt ning katkestab töö, kui vastava objekti arvutus tühistatakse. Tühistatud objekt eemaldatakse käimasoleva arvutuse ajal tühistamiseks saadaolevate objektide loendist
+
+Iga objekti arvutuse puhul käsitletakse eraldi järgmisi olekuid:
+
+- **Õnnestus** - arvutus lõpetati edukalt ja tulemus saadi kätte
+- **Tühistatud** - arvutus katkestati kasutaja tühistamistaotluse tõttu
+- **Viga** - arvutuse käigus tekkis erand
+
+Ühe objekti viga või tühistamine ei takista teiste objektide arvutuste tulemuste töötlemist. Uue arvutuse käivitamisel lähtestatakse eelmise käivituse tühistamise olekud
+
+### Aruanne ja jõudluse võrdlus
+
+Aruandes kuvatakse iga objekti nimi, lõppolek, tulemus või veateade ning arvutuse kestus millisekundites. Lisaks kuvatakse kõigi arvutuste koguaeg
+
+Järjestikuse ja paralleelse režiimi võrdlemiseks tuleb valida samad objektid ja sama iteratsioonide arv. Tulemuste ja kestuste võrdlemine aitab hinnata paralleeltöötluse mõju rakenduse jõudlusele
+
+### Kasutatud tehnoloogiad
+
+- `Task.Run` - CPU-põhiste arvutuste käivitamine taustal
+- `Task.WhenAll` - paralleelsete ülesannete lõpetamise ootamine;
+- `CancellationTokenSource` ja `CancellationToken` - iga objekti arvutuse eraldi tühistamine
+- `Stopwatch` – arvutuste kestuse mõõtmine
+- muutumatud snapshot-andmed - samade sisendandmete kasutamine mõlemas režiimis
+- WPF-i andmesidumine (`INotifyPropertyChanged`, `ObservableCollection`) - kasutajaliidese ja arvutustulemuste uuendamine
+
+## Programmi töötamise näide 
+
+### Arvutuste edukas sooritamine (paralleelne)
+
+<img width="981" height="566" alt="Знімок екрана 2026-10-27 212834" src="https://github.com/user-attachments/assets/44a6d0bc-2a84-439a-b6a2-1afa94dc5667" />
+
+### Arvutuste edukas sooritamine koos mõnede objektide tühjendamisega (paralleelne)
+
+<img width="975" height="556" alt="Знімок екрана 2026-10-27 212859" src="https://github.com/user-attachments/assets/626c02f0-3fe3-4a92-8a72-607ce3931c64" />
+
+### Arvutuste edukas sooritamine (järjestikune)
+
+<img width="977" height="570" alt="image" src="https://github.com/user-attachments/assets/34377c19-1f22-4005-8de2-4eed1db20e50" />
+
+### Testviga
+
+<img width="972" height="557" alt="image" src="https://github.com/user-attachments/assets/549860a6-b0fb-4c7d-a0c3-14936edadfd9" />
+
+
