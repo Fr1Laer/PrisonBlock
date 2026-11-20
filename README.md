@@ -157,22 +157,54 @@ Järjestikuse ja paralleelse režiimi võrdlemiseks tuleb valida samad objektid 
 - muutumatud snapshot-andmed - samade sisendandmete kasutamine mõlemas režiimis
 - WPF-i andmesidumine (`INotifyPropertyChanged`, `ObservableCollection`) - kasutajaliidese ja arvutustulemuste uuendamine
 
+---
+
+## Vol. 4 selgitus
+
+Vol. 4 laiendab PrisonBlock WPF-rakendust andmete püsiva salvestamise ja taastamise võimalustega. Rakendus kasutab kolme salvestusviisi: JSON-failid, XML-failid ja SQL Server LocalDB andmebaas
+
+### Peamised funktsioonid
+
+- **JSON Data Storage** – maailma andmete serialiseerimine ja deserialiseerimine `System.Text.Json` abil
+- **XML Data Storage** – andmete salvestamine ja laadimine `XmlSerializer` abil
+- **Database Data Storage** – andmete salvestamine ja taastamine SQL Server LocalDB andmebaasist ADO.NET-i (`Microsoft.Data.SqlClient`) abil
+- **Dependency Injection** – sõltuvuste registreerimine ja haldamine `Microsoft.Extensions.DependencyInjection` abil
+- **Storage Factory** – sobiva salvestusmeetodi valimine vastavalt kasutaja valikule
+- **File Dialogs** – JSON ja XML-failide salvestamise ning avamise dialoogid
+- **Data Validation** – laaditud andmete kontrollimine enne olemasoleva maailma asendamist
+
+### Arhitektuur
+
+Kõik salvestuslahendused realiseerivad ühist `IWorldStorage` liidest, mis määratleb asünkroonsed `SaveAsync` ja `LoadAsync` meetodid
+
+Andmete edastamiseks kasutatakse `WorldDto` ja `PrisonerDto` klasse. `WorldMapper` teisendab vangid DTO-objektideks ja taastab nende põhjal vastava vangide maailma. Vangid taastatakse nende algsetesse tüübipõhistesse hoidlate (`Repository<T>`) kogudesse
+
+### Andmete turvalisus ja taastamine
+
+- Laaditud andmeid valideeritakse enne olemasoleva maailma asendamist
+- Vigase või tühja JSON- või XML-faili korral kuvatakse kasutajale arusaadav veateade
+- Ebaõnnestunud laadimine ei muuda rakenduse olemasolevat andmestikku
+- LocalDB salvestamisel kasutatakse andmebaasitehinguid (`SQL Transactions`)
+- Failide lugemine ja kirjutamine toimub asünkroonselt, et vältida kasutajaliidese blokeerimist
+
+### Kasutatud tehnoloogiad
+
+- Dependency Injection
+- System.Text.Json
+- System.Xml.Serialization
+- ADO.NET
+- Microsoft SQL Server LocalDB
+- Microsoft.Data.SqlClient
+
 ## Programmi töötamise näide 
 
-### Arvutuste edukas sooritamine (paralleelne)
+### Andmete edukas salvestamine JSON-faili
 
-<img width="981" height="566" alt="Знімок екрана 2026-10-27 212834" src="https://github.com/user-attachments/assets/44a6d0bc-2a84-439a-b6a2-1afa94dc5667" />
+<img width="813" height="850" alt="image" src="https://github.com/user-attachments/assets/800c2290-140d-4513-ac67-c8ad7ce0e995" />
 
-### Arvutuste edukas sooritamine koos mõnede objektide tühjendamisega (paralleelne)
+### Katse laadida tühja JSON-faili
 
-<img width="975" height="556" alt="Знімок екрана 2026-10-27 212859" src="https://github.com/user-attachments/assets/626c02f0-3fe3-4a92-8a72-607ce3931c64" />
+<img width="984" height="64" alt="image" src="https://github.com/user-attachments/assets/3f6eb5a0-e2bd-4350-995b-7d370aedd418" />
 
-### Arvutuste edukas sooritamine (järjestikune)
-
-<img width="977" height="570" alt="image" src="https://github.com/user-attachments/assets/34377c19-1f22-4005-8de2-4eed1db20e50" />
-
-### Testviga
-
-<img width="972" height="557" alt="image" src="https://github.com/user-attachments/assets/549860a6-b0fb-4c7d-a0c3-14936edadfd9" />
 
 
