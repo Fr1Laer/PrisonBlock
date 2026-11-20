@@ -1,4 +1,6 @@
 ﻿using PrisonBlock.Core;
+using PrisonBlock.Core.Storage;
+using PrisonBlock.WpfApp.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,43 +8,58 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Web;
 
 namespace PrisonBlock.WpfApp.ViewModels;
 
 public sealed class MainViewModel : INotifyPropertyChanged
 {
-    private readonly PrisonService _service = new();
+    private readonly PrisonService _service;
+    private readonly WorldStorageFactory _storageFactory;
+    private readonly IStorageDialogService _dialogService;
 
     private int _selectedWorkload = 500000;
     private bool _isRunning;
 
-    // Arvutuste valikuid saab muuta ainult töövälisel ajal
-    public bool CanEditComputations => !IsRunning;
     private string _computationStatus = "Käivitamise ootamine";
-
     private string _selectedRepositoryType = nameof(Rookie);
     private string _newName = "";
     private string _searchText = "";
+    private string? _selectedStorageFormat = "JSON";
+    private string _storageStatus = "Salvestamine valmis";
 
     private Prisoner? _selectedPrisoner;
+    private string? _selectedCancellationTarget;
+
+    private bool _computationSelectionInitialized;
+
+    private readonly Dictionary<string, CancellationTokenSource>
+        _objectCancellationSources = new();
+
+    private readonly HashSet<string> _cancelledObjects = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<string> RepositoryTypes { get; }
+
     public ObservableCollection<Prisoner> Prisoners { get; } = new();
+
     public ObservableCollection<Prisoner> FilteredPrisoners { get; } = new();
+
     public ObservableCollection<Prisoner> SortedPrisoners { get; } = new();
+
     public ObservableCollection<string> Summary { get; } = new();
+
     public ObservableCollection<string> Log { get; } = new();
 
-    // Eeltöötluse objektide valik ja aruande kogumine
     public ObservableCollection<PrisonerChoice> ComputationPrisoners { get; } = new();
+
     public ObservableCollection<int> WorkloadOptions { get; } =
-        new() { 100000, 500000, 1000000, 3000000, 1000000000};
+        new() { 100000, 500000, 1000000, 3000000, 1000000000 };
 
     public ObservableCollection<string> ComputationReport { get; } = new();
+
+    public ObservableCollection<string> StorageFormats { get; } =
+        new() { "JSON", "XML", "LocalDB" };
 
     public RelayCommand AddCommand { get; }
     public RelayCommand RemoveCommand { get; }
@@ -55,18 +72,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public RelayCommand RunParallelCommand { get; }
     public RelayCommand CancelCommand { get; }
 
-    // Salvestab iga objekti katkestamise tokeni
-    private readonly Dictionary<string, CancellationTokenSource>
-        _objectCancellationSources = new();
+    public RelayCommand SaveCommand { get; }
+    public RelayCommand LoadCommand { get; }
 
-    // Salvestab objektid, mille arvutus on juba tühistatud
-    private readonly HashSet<string> _cancelledObjects = new();
-        
-    // Tagastab arvutuste objektide nimed
+    public bool CanEditComputations => !IsRunning;
 
-    public IEnumerable<string> CancellationTargets => _objectCancellationSources.Keys.Where(name => !_cancelledObjects.Contains(name));
+    public bool CanUseStorage => !IsRunning;
 
-    private string? _selectedCancellationTarget;
+    public IEnumerable<string> CancellationTargets =>
+        _objectCancellationSources.Keys
+            .Where(name => !_cancelledObjects.Contains(name));
 
     public string? SelectedCancellationTarget
     {
@@ -80,7 +95,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
-
 
     public string SelectedRepositoryType
     {
@@ -133,6 +147,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 return;
 
             _selectedPrisoner = value;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedDetails));
             OnPropertyChanged(nameof(SelectedEnergy));
@@ -145,7 +160,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public string SelectedDetails => SelectedPrisoner?.GetDetails() ?? "Vangi ei valitud";
+    public string SelectedDetails =>
+        SelectedPrisoner?.GetDetails() ?? "Vangi ei valitud";
 
     public int SelectedEnergy => SelectedPrisoner?.Energy ?? 0;
 
@@ -162,6 +178,32 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public string? SelectedStorageFormat
+    {
+        get => _selectedStorageFormat;
+        set
+        {
+            if (_selectedStorageFormat == value)
+                return;
+
+            _selectedStorageFormat = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string StorageStatus
+    {
+        get => _storageStatus;
+        private set
+        {
+            if (_storageStatus == value)
+                return;
+
+            _storageStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsRunning
     {
         get => _isRunning;
@@ -172,15 +214,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             _isRunning = value;
 
-            // Uuendab arvutuste käivitamise olekut
             OnPropertyChanged(nameof(IsRunning));
-
-            // Uuendab arvutuste valikute lubatud olekut
             OnPropertyChanged(nameof(CanEditComputations));
+            OnPropertyChanged(nameof(CanUseStorage));
 
             RunSequentialCommand.RaiseCanExecuteChanged();
             RunParallelCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
+
+            SaveCommand.RaiseCanExecuteChanged();
+            LoadCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -196,32 +239,70 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
-    public MainViewModel()
+
+    public MainViewModel(
+        PrisonService service,
+        WorldStorageFactory storageFactory,
+        IStorageDialogService dialogService)
     {
-        RepositoryTypes = new ObservableCollection<string>(_service.RepositoryTypes);
+        _service = service;
+        _storageFactory = storageFactory;
+        _dialogService = dialogService;
+
+        RepositoryTypes =
+            new ObservableCollection<string>(_service.RepositoryTypes);
 
         AddCommand = new RelayCommand(Add, CanAdd);
         RemoveCommand = new RelayCommand(Remove, HasSelection);
         CrazyActionCommand = new RelayCommand(CrazyAction, HasSelection);
-        WorkCommand = new RelayCommand(Work, () => SelectedPrisoner is IWork);
-        StudyCommand = new RelayCommand(Study, () => SelectedPrisoner is IStudy);
-        ChessCommand = new RelayCommand(Chess, () => SelectedPrisoner is IPlayChess);
 
-        RunSequentialCommand = new RelayCommand(async () => await RunComputationsAsync(false), () => !IsRunning);
-        RunParallelCommand = new RelayCommand(async () => await RunComputationsAsync(true), () => !IsRunning);
-        CancelCommand = new RelayCommand(CancelComputations, () => IsRunning);
+        WorkCommand = new RelayCommand(
+            Work,
+            () => SelectedPrisoner is IWork);
+
+        StudyCommand = new RelayCommand(
+            Study,
+            () => SelectedPrisoner is IStudy);
+
+        ChessCommand = new RelayCommand(
+            Chess,
+            () => SelectedPrisoner is IPlayChess);
+
+        RunSequentialCommand = new RelayCommand(
+            async () => await RunComputationsAsync(false),
+            () => !IsRunning);
+
+        RunParallelCommand = new RelayCommand(
+            async () => await RunComputationsAsync(true),
+            () => !IsRunning);
+
+        CancelCommand = new RelayCommand(
+            CancelComputations,
+            () => IsRunning);
+
+        SaveCommand = new RelayCommand(
+            async () => await SaveAsync(),
+            () => CanUseStorage);
+
+        LoadCommand = new RelayCommand(
+            async () => await LoadAsync(),
+            () => CanUseStorage);
 
         _service.LogGenerated += AddLog;
 
-        AddStarterPrisoners();
-        RefreshPrisoners();
+        if (!_service.GetAll().Any())
+            AddStarterPrisoners();
 
+        RefreshPrisoners();
         RefreshComputationPrisoners();
     }
 
-    private bool HasSelection() => SelectedPrisoner is not null;
+    private bool HasSelection() =>
+        SelectedPrisoner is not null;
 
-    private bool CanAdd() => !string.IsNullOrWhiteSpace(NewName) && NewName.Trim().Length <= 20;
+    private bool CanAdd() =>
+        !string.IsNullOrWhiteSpace(NewName) &&
+        NewName.Trim().Length <= 20;
 
     private void AddStarterPrisoners()
     {
@@ -231,7 +312,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _service.Add(new ChessMaster("ChessMaster"));
         _service.Add(new Chef("Chef"));
 
-        /// new prisoners
         _service.Add(new Gardener("Gardener"));
         _service.Add(new Musician("Musician"));
         _service.Add(new Gambler("Gambler"));
@@ -239,7 +319,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void Add()
     {
-        Prisoner? prisoner = PrisonFactory.Create(SelectedRepositoryType, NewName, out string error);
+        Prisoner? prisoner = PrisonFactory.Create(
+            SelectedRepositoryType,
+            NewName,
+            out string error);
 
         if (prisoner is null)
         {
@@ -248,8 +331,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         _service.Add(prisoner);
+
         NewName = "";
+
         RefreshPrisoners();
+        RefreshComputationPrisoners();
+
         SelectedPrisoner = prisoner;
     }
 
@@ -259,11 +346,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
 
         Prisoner removed = SelectedPrisoner;
+
         _service.Remove(removed);
 
         SelectedPrisoner = null;
-        RefreshPrisoners();
 
+        RefreshPrisoners();
         RefreshComputationPrisoners();
 
         AddLog($"{removed.Name} eemaldati plokist 13");
@@ -295,12 +383,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         AddLog(_service.PerformChess(SelectedPrisoner));
         RefreshAfterAction();
     }
+
     private void RefreshAfterAction()
     {
         Prisoner? selected = SelectedPrisoner;
 
         RefreshQueries();
-
         RefreshComputationPrisoners();
 
         SelectedPrisoner = selected;
@@ -313,12 +401,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         Prisoners.Clear();
 
-        foreach (Prisoner prisoner in _service.GetByType(SelectedRepositoryType))
+        foreach (Prisoner prisoner in
+                 _service.GetByType(SelectedRepositoryType))
         {
             Prisoners.Add(prisoner);
         }
 
         SelectedPrisoner = null;
+
         RefreshQueries();
     }
 
@@ -330,32 +420,32 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            filtered = filtered.Where(p => p.Name.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(p =>
+                p.Name.Contains(
+                    SearchText.Trim(),
+                    StringComparison.OrdinalIgnoreCase));
         }
 
         foreach (Prisoner prisoner in filtered)
-        {
             FilteredPrisoners.Add(prisoner);
-        }
 
         SortedPrisoners.Clear();
 
-        foreach (Prisoner prisoner in Prisoners.OrderByDescending(p => p.Energy))
+        foreach (Prisoner prisoner in
+                 Prisoners.OrderByDescending(p => p.Energy))
         {
             SortedPrisoners.Add(prisoner);
         }
 
         Summary.Clear();
 
-        foreach (var group in _service.GetAll().GroupBy(p => p.GetType().Name).OrderBy(g => g.Key))
+        foreach (var group in _service.GetAll()
+                     .GroupBy(p => p.GetType().Name)
+                     .OrderBy(g => g.Key))
         {
             Summary.Add($"{group.Key}: {group.Count()}");
         }
     }
-
-    // Valmistab arvutusteks valitavate vangide nimekirja
-
-    private bool _computationSelectionInitialized;
 
     private void RefreshComputationPrisoners()
     {
@@ -375,7 +465,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             if (initializeSelection)
             {
-                // Vaikimisi valib rakendus kolm esimest vangi
                 isSelected = index < 3;
             }
             else
@@ -391,23 +480,95 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         _computationSelectionInitialized = true;
 
-        // Valib vaikimisi esimese valitud objekti
         if (SelectedCancellationTarget is null ||
             !CancellationTargets.Contains(SelectedCancellationTarget))
         {
-            SelectedCancellationTarget = CancellationTargets.FirstOrDefault();
+            SelectedCancellationTarget =
+                CancellationTargets.FirstOrDefault();
         }
     }
 
+    private async Task SaveAsync()
+    {
+        if (IsRunning)
+            return;
 
-    // Käivitab mõlema režiimi arvutused samade andmesnapshot'idega
+        string format = SelectedStorageFormat ?? "JSON";
+
+        try
+        {
+            string? path = _dialogService.GetSavePath(format);
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            IWorldStorage storage = _storageFactory.GetStorage(format);
+
+            WorldDto world = WorldMapper.ToDto(_service.GetAll());
+
+            StorageStatus = $"Salvestamine: {format}...";
+
+            await storage.SaveAsync(world, path);
+
+            StorageStatus = $"Maailm salvestati: {format}";
+
+            AddLog($"Vangla maailm salvestati vormingus {format}");
+        }
+        catch (Exception ex)
+        {
+            StorageStatus = $"Salvestamise viga: {ex.Message}";
+            AddLog(StorageStatus);
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        if (IsRunning)
+            return;
+
+        string format = SelectedStorageFormat ?? "JSON";
+
+        try
+        {
+            string? path = _dialogService.GetLoadPath(format);
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            IWorldStorage storage = _storageFactory.GetStorage(format);
+
+            StorageStatus = $"Laadimine: {format}...";
+
+            WorldDto world = await storage.LoadAsync(path);
+
+            List<Prisoner> prisoners =
+                WorldMapper.ValidateAndCreate(world);
+
+            _service.ReplaceAll(prisoners);
+
+            SelectedPrisoner = null;
+
+            _computationSelectionInitialized = false;
+
+            RefreshPrisoners();
+            RefreshComputationPrisoners();
+
+            StorageStatus = $"Maailm laaditi: {format}";
+
+            AddLog($"Vangla maailm laaditi vormingust {format}");
+        }
+        catch (Exception ex)
+        {
+            StorageStatus = $"Laadimise viga: {ex.Message}";
+            AddLog(StorageStatus);
+        }
+    }
 
     private async Task RunComputationsAsync(bool parallel)
     {
         if (IsRunning)
             return;
 
-        // Lähtestab eelmise arvutuse tühistatud objektid
         _cancelledObjects.Clear();
 
         List<PrisonerChoice> selected = ComputationPrisoners
@@ -421,7 +582,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        // Salvestab lähteandmed enne arvutuste käivitamist
         List<PrisonerSnapshot> snapshots = selected
             .Select(p => new PrisonerSnapshot(
                 p.Name,
@@ -431,7 +591,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         int iterations = SelectedWorkload;
 
-        // Loob igale objektile eraldi katkestamise allika
         foreach (CancellationTokenSource source
                  in _objectCancellationSources.Values)
         {
@@ -442,16 +601,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         foreach (PrisonerSnapshot snapshot in snapshots)
         {
-            // Iga objekt saab oma katkestamise allika
             _objectCancellationSources[snapshot.Name] =
                 new CancellationTokenSource();
         }
 
-        // Uuendab tühistamise sihtobjekti valikut
         OnPropertyChanged(nameof(CancellationTargets));
 
         if (SelectedCancellationTarget is null ||
-            !_objectCancellationSources.ContainsKey(SelectedCancellationTarget))
+            !_objectCancellationSources.ContainsKey(
+                SelectedCancellationTarget))
         {
             SelectedCancellationTarget = snapshots.First().Name;
         }
@@ -460,8 +618,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         ComputationReport.Clear();
 
-        // Valib vaikimisi esimese tühistamise sihtobjekti
-        SelectedCancellationTarget = CancellationTargets.FirstOrDefault();
+        SelectedCancellationTarget =
+            CancellationTargets.FirstOrDefault();
 
         ComputationStatus = parallel
             ? "Paralleelarvutus käib..."
@@ -475,22 +633,21 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             if (parallel)
             {
-                // Käivitab iga objekti eraldi ülesandes
                 Task<ComputationResult>[] tasks = snapshots
-                   .Select(snapshot => RunOneAsync(
-                       snapshot,
-                       iterations,
-                       _objectCancellationSources[snapshot.Name].Token))
-                   .ToArray();
+                    .Select(snapshot => RunOneAsync(
+                        snapshot,
+                        iterations,
+                        _objectCancellationSources[snapshot.Name].Token))
+                    .ToArray();
 
-                ComputationResult[] results = await Task.WhenAll(tasks);
+                ComputationResult[] results =
+                    await Task.WhenAll(tasks);
 
                 foreach (ComputationResult result in results)
                     ComputationReport.Add(result.ToReportLine());
             }
             else
             {
-                // Käivitab järgmise arvutuse pärast eelmise lõppu
                 foreach (PrisonerSnapshot snapshot in snapshots)
                 {
                     ComputationResult result = await RunOneAsync(
@@ -506,20 +663,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         catch (OperationCanceledException)
         {
-            // Käsitleb kasutaja algatatud arvutuse tühistamist
             ComputationStatus = "Arvutus tühistati";
             ComputationReport.Add(ComputationStatus);
         }
         catch (Exception ex)
         {
-            // Salvestab ootamatu arvutusvea
             ComputationStatus = $"Arvutuse viga: {ex.Message}";
             ComputationReport.Add(ComputationStatus);
             AddLog(ComputationStatus);
         }
         finally
         {
-            // Peatab koguaega mõõtva kella
             totalStopwatch.Stop();
 
             ComputationReport.Add(
@@ -527,7 +681,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             AddLog(ComputationStatus);
 
-            // Vabastab iga objekti katkestamise allika
             foreach (CancellationTokenSource source
                      in _objectCancellationSources.Values)
             {
@@ -536,24 +689,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             _objectCancellationSources.Clear();
 
-            // Uuendab tühistamise sihtobjektide loendit
             OnPropertyChanged(nameof(CancellationTargets));
 
-            // Lähtestab valitud tühistamise sihtobjekti
             SelectedCancellationTarget = null;
 
-            // Taastab kasutajaliidese tööoleku
             IsRunning = false;
         }
     }
 
-
-    // Iga objekti vead ja tühistamine töödeldakse eraldi
     private static async Task<ComputationResult> RunOneAsync(
         PrisonerSnapshot snapshot,
         int iterations,
         CancellationToken token)
-
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -592,19 +739,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    // CPU-põhine korduv simulatsioon, mis kasutab ainult snapshot'i andmeid
     private static long PerformCpuCalculation(
         PrisonerSnapshot snapshot,
         int iterations,
         CancellationToken token)
     {
-        // Tekitab testimiseks kunstliku arvutusvea
-        //if (snapshot.Name == "Rookie")
-        //{
-        //    throw new InvalidOperationException(
-        //        "Testviga: arvutus ebaõnnestus");
-        //}
-
         uint state = 2166136261;
 
         unchecked
@@ -631,7 +770,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             for (int i = 0; i < iterations; i++)
             {
-                // Kontrollib tühistamist regulaarselt CPU-tsüklis
                 if ((i & 4095) == 0)
                     token.ThrowIfCancellationRequested();
 
@@ -650,7 +788,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    // Katkestab valitud objekti arvutuse ainult ühe korra
     private void CancelComputations()
     {
         if (SelectedCancellationTarget is not string name)
@@ -664,7 +801,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             source.Cancel();
             _cancelledObjects.Add(name);
 
-            // Uuendab tühistatud objektide kuvamist
             OnPropertyChanged(nameof(CancellationTargets));
 
             ComputationStatus =
@@ -672,7 +808,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    // Arvutuse jaoks kasutatav muutumatu andmesnapshot
     private sealed record PrisonerSnapshot(
         string Name,
         string Type,
@@ -689,7 +824,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             $"{Duration.TotalMilliseconds:F2} ms";
     }
 
-    // Valitav objekt arvutuste loendis
     public sealed class PrisonerChoice : INotifyPropertyChanged
     {
         private bool _isSelected;
@@ -709,6 +843,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                     return;
 
                 _isSelected = value;
+
                 PropertyChanged?.Invoke(
                     this,
                     new PropertyChangedEventArgs(nameof(IsSelected)));
@@ -729,9 +864,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Log.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
     }
 
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    private void OnPropertyChanged(
+        [CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        PropertyChanged?.Invoke(
+            this,
+            new PropertyChangedEventArgs(propertyName));
     }
 }
-
