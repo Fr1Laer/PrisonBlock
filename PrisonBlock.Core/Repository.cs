@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Linq;
+﻿namespace PrisonBlock.Core;
 
-namespace PrisonBlock.Core;
-
-public sealed class Repository<T> : IRepository<T>, IPrisonerEventSource where T : Prisoner
+public sealed class Repository<T> :
+    IRepository<T>,
+    IPrisonerEventSource where T : Prisoner
 {
     private readonly List<T> _items = new();
 
@@ -23,7 +20,6 @@ public sealed class Repository<T> : IRepository<T>, IPrisonerEventSource where T
 
         _items.Add(item);
 
-        // existing prisoners greet the newcomer 
         Added?.Invoke(item);
 
         item.ReactionLogged += ForwardLog;
@@ -32,20 +28,59 @@ public sealed class Repository<T> : IRepository<T>, IPrisonerEventSource where T
         LogGenerated?.Invoke($"Lisati {item.Name} ({typeof(T).Name})");
     }
 
+    // Taastab salvestatud objekti ilma reaktsioone käivitamata
+    internal void Restore(T item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (_items.Any(existing => existing.Id == item.Id))
+            throw new InvalidOperationException("Duplikaatne vangi ID");
+
+        _items.Add(item);
+        item.ReactionLogged += ForwardLog;
+        item.Subscribe(this);
+    }
+
+    internal void ReplaceAll(IEnumerable<T> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        List<T> newItems = items.ToList();
+
+        if (newItems.Any(item => item is null))
+            throw new ArgumentException("Hoidla ei saa sisaldada tühje elemente", nameof(items));
+
+        if (newItems.Distinct().Count() != newItems.Count)
+            throw new InvalidOperationException("Hoidlas on korduvad objektid");
+
+        foreach (T oldItem in _items)
+        {
+            oldItem.Unsubscribe(this);
+            oldItem.ReactionLogged -= ForwardLog;
+        }
+
+        _items.Clear();
+
+        foreach (T newItem in newItems)
+        {
+            _items.Add(newItem);
+            newItem.ReactionLogged += ForwardLog;
+            newItem.Subscribe(this);
+        }
+    }
+
     public bool Remove(T item)
     {
         if (item is null || !_items.Contains(item))
             return false;
 
-        // removed prisoner must not react to future events
         item.Unsubscribe(this);
         item.ReactionLogged -= ForwardLog;
         _items.Remove(item);
 
-        // remaining prisoners say goodbye
         Removing?.Invoke(item);
-
         LogGenerated?.Invoke($"Eemaldati {item.Name}");
+
         return true;
     }
 
@@ -69,6 +104,4 @@ public sealed class Repository<T> : IRepository<T>, IPrisonerEventSource where T
     {
         LogGenerated?.Invoke(message);
     }
-
 }
-

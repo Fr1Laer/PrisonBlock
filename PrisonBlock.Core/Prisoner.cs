@@ -1,24 +1,29 @@
-﻿using System.Data;
-using System.Reflection.Metadata;
-using System.Security.AccessControl;
-
-namespace PrisonBlock.Core;
+﻿namespace PrisonBlock.Core;
 
 public abstract class Prisoner
 {
-    private readonly string _name;
-
+    private string _name;
     private int _energy;
 
     protected Prisoner(string name, int energy = 70)
+        : this(Guid.NewGuid(), name, energy)
     {
+    }
+
+    protected Prisoner(Guid id, string name, int energy)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("ID ei tohi olla tühi", nameof(id));
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Nimi on kohustuslik");
 
+        Id = id;
         _name = name.Trim();
-
         _energy = Math.Clamp(energy, 0, 100);
     }
+
+    public Guid Id { get; }
 
     public string Name => _name;
 
@@ -30,7 +35,6 @@ public abstract class Prisoner
             return false;
 
         _energy -= amount;
-
         return true;
     }
 
@@ -40,10 +44,16 @@ public abstract class Prisoner
             _energy = Math.Clamp(_energy + amount, 0, 100);
     }
 
+    internal void RestoreState(int energy)
+    {
+        _energy = Math.Clamp(energy, 0, 100);
+    }
+
     public virtual string GetDetails() => $"{Name} | {GetType().Name} | Energia: {Energy}/100";
+
     public abstract string CrazyAction();
 
-    public event Action<string>? ReactionLogged; 
+    public event Action<string>? ReactionLogged;
 
     internal void Subscribe(IPrisonerEventSource source)
     {
