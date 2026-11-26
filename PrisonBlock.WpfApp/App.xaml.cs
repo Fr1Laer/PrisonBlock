@@ -4,6 +4,8 @@ using PrisonBlock.Core.Storage;
 using PrisonBlock.WpfApp.Services;
 using PrisonBlock.WpfApp.ViewModels;
 using System.Windows;
+using Microsoft.EntityFrameworkCore;
+using PrisonBlock.Core.Storage.EfCore;
 
 namespace PrisonBlock.WpfApp;
 
@@ -21,7 +23,18 @@ public partial class App : Application
 
         services.AddSingleton<JsonWorldStorage>();
         services.AddSingleton<XmlWorldStorage>();
-        services.AddSingleton<SqlLocalDbWorldStorage>();
+        // Valib LocalDB teostuse DI registreerimisel
+        if (StorageProviderOptions.UseEfCore())
+        {
+            services.AddDbContextFactory<PrisonBlockDbContext>(options =>
+                options.UseSqlServer(
+                    @"Server=(localdb)\MSSQLLocalDB;Database=PrisonBlock_Vol5;Trusted_Connection=True;TrustServerCertificate=True"));
+            services.AddSingleton<IWorldStorage, EfCoreLocalDbWorldStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IWorldStorage, SqlLocalDbWorldStorage>();
+        }
 
         services.AddSingleton<WorldStorageFactory>();
         services.AddSingleton<IStorageDialogService, StorageDialogService>();

@@ -171,7 +171,7 @@ public sealed class SqlLocalDbWorldStorage : IWorldStorage
                     "@PrisonerId", prisoner.Id);
 
                 membershipCommand.Parameters.AddWithValue(
-                    "@RepositoryType", prisoner.Type);
+                    "@RepositoryType", prisoner.Group);
 
                 await membershipCommand.ExecuteNonQueryAsync(token);
             }
@@ -239,6 +239,7 @@ public sealed class SqlLocalDbWorldStorage : IWorldStorage
             {
                 Id = reader.GetGuid(0),
                 Type = type,
+                Group = repositoryType,
                 Name = reader.GetString(2),
                 Energy = reader.GetInt32(3),
                 Masterpieces = reader.GetInt32(4),

@@ -6,12 +6,12 @@ public sealed class WorldStorageFactory
 {
     private readonly JsonWorldStorage _jsonStorage;
     private readonly XmlWorldStorage _xmlStorage;
-    private readonly SqlLocalDbWorldStorage _localDbStorage;
+    private readonly IWorldStorage _localDbStorage;
 
     public WorldStorageFactory(
         JsonWorldStorage jsonStorage,
         XmlWorldStorage xmlStorage,
-        SqlLocalDbWorldStorage localDbStorage)
+        IWorldStorage localDbStorage)
     {
         _jsonStorage = jsonStorage;
         _xmlStorage = xmlStorage;

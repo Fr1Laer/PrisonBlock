@@ -15,6 +15,9 @@ public sealed class PrisonerDto
 
     public string Type { get; set; } = "";
 
+    // Näitab vangla maailma rühmakuuluvust
+    public string Group { get; set; } = "";
+
     public string Name { get; set; } = "";
 
     public int Energy { get; set; }
