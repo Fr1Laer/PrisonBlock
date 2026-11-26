@@ -21,6 +21,7 @@ public static class WorldMapper
         {
             Id = prisoner.Id,
             Type = prisoner.GetType().Name,
+            Group = PrisonerGroup.FromPrisoner(prisoner).Name,
             Name = prisoner.Name,
             Energy = prisoner.Energy
         };
@@ -57,6 +58,23 @@ public static class WorldMapper
 
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new InvalidDataException("Vangi nimi puudub");
+
+        // Vanade failide rühm tuletatakse tegelase tüübist
+        if (string.IsNullOrWhiteSpace(dto.Group))
+            dto.Group = dto.Type;
+
+        try
+        {
+            if (!string.Equals(
+                    PrisonerGroup.FromType(dto.Type).Name,
+                    dto.Group,
+                    StringComparison.Ordinal))
+                throw new InvalidDataException("Vangi rühm ei vasta tegelase tüübile");
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException("Vangi rühm ei ole lubatud", exception);
+        }
 
         if (dto.Energy is < 0 or > 100)
             throw new InvalidDataException("Vangi energia ei ole lubatud vahemikus");
