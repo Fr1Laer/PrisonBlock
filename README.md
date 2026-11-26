@@ -206,5 +206,51 @@ Andmete edastamiseks kasutatakse `WorldDto` ja `PrisonerDto` klasse. `WorldMappe
 
 <img width="984" height="64" alt="image" src="https://github.com/user-attachments/assets/3f6eb5a0-e2bd-4350-995b-7d370aedd418" />
 
+---
+
+## Vol. 5 selgitus
+
+Vol. 5 lisab olemasolevale `IWorldStorage` salvestuslepingule EF Core'i teostuse. JSON, XML ja ADO.NET-i võimalused jäävad alles. Vaikimisi kasutab rakendus LocalDB-ga EF Core'i, kuid käivitamisel valib DI ainult ühe LocalDB teostuse
+
+### EF Core ja käivitamisel valitav teostus
+
+- `EfCoreLocalDbWorldStorage` realiseerib sama `IWorldStorage` liidese nagu JSON-, XML- ja ADO.NET-i teostused
+- `App.xaml.cs` registreerib DI-konteinerisse vaikimisi `EfCoreLocalDbWorldStorage`
+- Kui enne rakenduse käivitamist määrata keskkonnamuutuja `PRISONBLOCK_DATABASE_PROVIDER=ADO`, registreeritakse selle asemel olemasolev `SqlLocalDbWorldStorage`
+- `WorldStorageFactory` sõltub nüüd konkreetsest klassist sõltumise asemel `IWorldStorage` abstraktsioonist
+
+### Päriluse kaardistus ja andmemudel
+
+Valitud on **TPH (Table-per-Hierarchy)** kaardistus. Kõik `PrisonerEntity` alamklassid salvestatakse tabelisse `Prisoners`. Veerg `PrisonerType` on diskriminaator ning eristab näiteks `ArtistEntity`, `ChessMasterEntity` ja `GamblerEntity`. Alamklasside muutuvad väljad (`Masterpieces`, `Wins`, `Plants`, `Songs`, `Cheats`) on samas tabelis ning mittevajalike tüüpide korral tühjad
+
+Tabel `RepositoryMemberships` seob iga vangi tema tüübipõhise rühmaga. Salvestamisel kasutatakse üht EF Core'i tehingut: eemaldatakse vana maailm, lisatakse vangid ja nende rühmakuuluvus ning tehing kinnitatakse ainult õnnestumise korral. Laadimisel loetakse rühm koos vangiga, taastatakse õige konkreetne tüüp DTO kaudu ning `PrisonService.ReplaceAll` seob tegelased õigete hoidlatega ja taastab nende reaktsioonide tellimused
+
+### LocalDB ja migratsioonid
+
+1. Paigalda SQL Server Express LocalDB või Visual Studio töökoormus **Data storage and processing**
+2. Käivita projekti juurkaustas järgmine käsk:
+
+   ```powershell
+   dotnet ef database update --project PrisonBlock.Core\PrisonBlock.Core.csproj --startup-project PrisonBlock.Core\PrisonBlock.Core.csproj
+   ```
+
+3. Rakenduse esimesel LocalDB salvestamisel või laadimisel kutsub EF Core ka ise `Database.MigrateAsync` välja ning loob andmebaasi `PrisonBlock_Vol5`
+
+Migratsioon `Storage/EfCore/Migrations/InitialEfCore` kirjeldab andmebaasi skeemi ning võimaldab skeemi samal viisil teises arvutis taastada
+
+### SOLID ja DDD
+
+Konkreetne SOLID-refaktoreerimine on sõltuvuse ümberpööramine
+
+- **Enne:** `WorldStorageFactory` sõltus otse klassist `SqlLocalDbWorldStorage`
+- **Pärast:** `WorldStorageFactory` sõltub `IWorldStorage` liidesest ning DI valib käivitamisel EF Core'i või ADO.NET-i teostuse
+
+See järgib Dependency Inversion Principle'it ja võimaldab uut andmebaasiteostust lisada ViewModelit muutmata. `MainViewModel` kasutab ainult `WorldStorageFactory`, `IWorldStorage` ja DTO-sid; selles puuduvad SQL-käsud, EF Core'i seadistus ja domeenireeglite koopia
+
+- **Entiteet:** `Prisoner`, mille identiteet on püsiv `Guid Id`
+- **Väärtusobjekt:** `PrisonerGroup`, mis kontrollib lubatud tüübipõhiseid rühmanimesid
+- **Agregaadi piir:** `PrisonService` koos oma tüübipõhiste `Repository<T>` hoidlatega; maailma asendamine toimub meetodis `ReplaceAll`
+- **Domeenireegel:** `Prisoner.TrySpendEnergy` ei luba tegevusel kulutada rohkem energiat, kui vangil on, ega muuta energiat negatiivseks
+
 
 
